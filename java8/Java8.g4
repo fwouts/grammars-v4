@@ -105,41 +105,15 @@ referenceType
 	;
 
 classOrInterfaceType
-	:	(	classType_lfno_classOrInterfaceType
-		|	interfaceType_lfno_classOrInterfaceType
-		)
-		(	classType_lf_classOrInterfaceType
-		|	interfaceType_lf_classOrInterfaceType
-		)*
+	:	annIdentifierWithTypeArguments ('.' annIdentifierWithTypeArguments)*
 	;
 
-classType
+annIdentifierWithTypeArguments
 	:	annotation* Identifier typeArguments?
-	|	classOrInterfaceType '.' annotation* Identifier typeArguments?
-	;
-
-classType_lf_classOrInterfaceType
-	:	'.' annotation* Identifier typeArguments?
-	;
-
-classType_lfno_classOrInterfaceType
-	:	annotation* Identifier typeArguments?
-	;
-
-interfaceType
-	:	classType
-	;
-
-interfaceType_lf_classOrInterfaceType
-	:	classType_lf_classOrInterfaceType
-	;
-
-interfaceType_lfno_classOrInterfaceType
-	:	classType_lfno_classOrInterfaceType
 	;
 
 typeVariable
-	:	annotation* Identifier
+	:	annIdentifier
 	;
 
 arrayType
@@ -149,24 +123,28 @@ arrayType
 	;
 
 dims
-	:	annotation* '[' ']' (annotation* '[' ']')*
+	:	dim+
+	;
+
+dim
+	:	annotation* '[' ']'
+	;
+
+unannDims
+	:	unannDim+
+	;
+
+unannDim
+	:	'[' ']'
 	;
 
 typeParameter
-	:	typeParameterModifier* Identifier typeBound?
-	;
-
-typeParameterModifier
-	:	annotation
+	:	annotation* Identifier typeBound?
 	;
 
 typeBound
 	:	'extends' typeVariable
-	|	'extends' classOrInterfaceType additionalBound*
-	;
-
-additionalBound
-	:	'&' interfaceType
+	|	'extends' classOrInterfaceType ('&' classOrInterfaceType)*
 	;
 
 typeArguments
@@ -187,41 +165,16 @@ wildcard
 	;
 
 wildcardBounds
-	:	'extends' referenceType
-	|	'super' referenceType
+	:	isExtends='extends' referenceType
+	|	isSuper='super' referenceType
 	;
 
 /*
  * Productions from §6 (Names)
  */
 
-packageName
-	:	Identifier
-	|	packageName '.' Identifier
-	;
-
-typeName
-	:	Identifier
-	|	packageOrTypeName '.' Identifier
-	;
-
-packageOrTypeName
-	:	Identifier
-	|	packageOrTypeName '.' Identifier
-	;
-
-expressionName
-	:	Identifier
-	|	ambiguousName '.' Identifier
-	;
-
-methodName
-	:	Identifier
-	;
-
-ambiguousName
-	:	Identifier
-	|	ambiguousName '.' Identifier
+dottedIdentifier
+	:	Identifier ('.' Identifier)*
 	;
 
 /*
@@ -233,7 +186,7 @@ compilationUnit
 	;
 
 packageDeclaration
-	:	packageModifier* 'package' packageName ';'
+	:	packageModifier* 'package' dottedIdentifier ';'
 	;
 
 packageModifier
@@ -241,26 +194,7 @@ packageModifier
 	;
 
 importDeclaration
-	:	singleTypeImportDeclaration
-	|	typeImportOnDemandDeclaration
-	|	singleStaticImportDeclaration
-	|	staticImportOnDemandDeclaration
-	;
-
-singleTypeImportDeclaration
-	:	'import' typeName ';'
-	;
-
-typeImportOnDemandDeclaration
-	:	'import' packageOrTypeName '.' '*' ';'
-	;
-
-singleStaticImportDeclaration
-	:	'import' 'static' typeName '.' Identifier ';'
-	;
-
-staticImportOnDemandDeclaration
-	:	'import' 'static' typeName '.' '*' ';'
+	:	'import' (isStatic='static')? dottedIdentifier ('.' isWildcard='*')? ';'
 	;
 
 typeDeclaration
@@ -302,7 +236,7 @@ typeParameterList
 	;
 
 superclass
-	:	'extends' classType
+	:	'extends' classOrInterfaceType
 	;
 
 superinterfaces
@@ -310,7 +244,7 @@ superinterfaces
 	;
 
 interfaceTypeList
-	:	interfaceType (',' interfaceType)*
+	:	classOrInterfaceType (',' classOrInterfaceType)*
 	;
 
 classBody
@@ -381,37 +315,11 @@ unannReferenceType
 	;
 
 unannClassOrInterfaceType
-	:	(	unannClassType_lfno_unannClassOrInterfaceType
-		|	unannInterfaceType_lfno_unannClassOrInterfaceType
-		)
-		(	unannClassType_lf_unannClassOrInterfaceType
-		|	unannInterfaceType_lf_unannClassOrInterfaceType
-		)*
+	:	unannIdentifierWithTypeArguments ('.' annIdentifierWithTypeArguments)*
 	;
 
-unannClassType
+unannIdentifierWithTypeArguments
 	:	Identifier typeArguments?
-	|	unannClassOrInterfaceType '.' annotation* Identifier typeArguments?
-	;
-
-unannClassType_lf_unannClassOrInterfaceType
-	:	'.' annotation* Identifier typeArguments?
-	;
-
-unannClassType_lfno_unannClassOrInterfaceType
-	:	Identifier typeArguments?
-	;
-
-unannInterfaceType
-	:	unannClassType
-	;
-
-unannInterfaceType_lf_unannClassOrInterfaceType
-	:	unannClassType_lf_unannClassOrInterfaceType
-	;
-
-unannInterfaceType_lfno_unannClassOrInterfaceType
-	:	unannClassType_lfno_unannClassOrInterfaceType
 	;
 
 unannTypeVariable
@@ -419,9 +327,11 @@ unannTypeVariable
 	;
 
 unannArrayType
-	:	unannPrimitiveType dims
-	|	unannClassOrInterfaceType dims
-	|	unannTypeVariable dims
+	:	(unannPrimitiveType | unannClassOrInterfaceType | unannTypeVariable) dims
+	;
+
+annIdentifier
+	:	annotation* Identifier
 	;
 
 methodDeclaration
@@ -442,8 +352,7 @@ methodModifier
 	;
 
 methodHeader
-	:	result methodDeclarator throws_?
-	|	typeParameters annotation* result methodDeclarator throws_?
+	:	(typeParameters annotation*)? result methodDeclarator throws_?
 	;
 
 result
@@ -456,13 +365,8 @@ methodDeclarator
 	;
 
 formalParameterList
-	:	formalParameters ',' lastFormalParameter
-	|	lastFormalParameter
-	;
-
-formalParameters
-	:	formalParameter (',' formalParameter)*
-	|	receiverParameter (',' formalParameter)*
+	:	(formalParameter | receiverParameter) (',' formalParameter)* (',' expandedFormalParameter)?
+	|	expandedFormalParameter
 	;
 
 formalParameter
@@ -474,9 +378,8 @@ variableModifier
 	|	'final'
 	;
 
-lastFormalParameter
+expandedFormalParameter
 	:	variableModifier* unannType annotation* '...' variableDeclaratorId
-	|	formalParameter
 	;
 
 receiverParameter
@@ -492,7 +395,7 @@ exceptionTypeList
 	;
 
 exceptionType
-	:	classType
+	:	classOrInterfaceType
 	|	typeVariable
 	;
 
@@ -521,11 +424,7 @@ constructorModifier
 	;
 
 constructorDeclarator
-	:	typeParameters? simpleTypeName '(' formalParameterList? ')'
-	;
-
-simpleTypeName
-	:	Identifier
+	:	typeParameters? Identifier '(' formalParameterList? ')'
 	;
 
 constructorBody
@@ -533,10 +432,8 @@ constructorBody
 	;
 
 explicitConstructorInvocation
-	:	typeArguments? 'this' '(' argumentList? ')' ';'
-	|	typeArguments? 'super' '(' argumentList? ')' ';'
-	|	expressionName '.' typeArguments? 'super' '(' argumentList? ')' ';'
-	|	primary '.' typeArguments? 'super' '(' argumentList? ')' ';'
+	:	typeArguments? isThis='this' '(' argumentList? ')' ';'
+	|	((dottedIdentifier | primary) '.')? typeArguments? 'super' '(' argumentList? ')' ';'
 	;
 
 enumDeclaration
@@ -663,7 +560,7 @@ annotation
 	;
 
 normalAnnotation
-	:	'@' typeName '(' elementValuePairList? ')'
+	:	'@' dottedIdentifier '(' elementValuePairList? ')'
 	;
 
 elementValuePairList
@@ -689,11 +586,11 @@ elementValueList
 	;
 
 markerAnnotation
-	:	'@' typeName
+	:	'@' dottedIdentifier
 	;
 
 singleElementAnnotation
-	:	'@' typeName '(' elementValue ')'
+	:	'@' dottedIdentifier '(' elementValue ')'
 	;
 
 /*
@@ -797,16 +694,15 @@ ifThenStatement
 	;
 
 ifThenElseStatement
-	:	'if' '(' expression ')' statementNoShortIf 'else' statement
+	:	'if' '(' expression ')' ifStatement=statementNoShortIf 'else' elseStatement=statement
 	;
 
 ifThenElseStatementNoShortIf
-	:	'if' '(' expression ')' statementNoShortIf 'else' statementNoShortIf
+	:	'if' '(' expression ')' ifStatement=statementNoShortIf 'else' elseStatement=statementNoShortIf
 	;
 
 assertStatement
-	:	'assert' expression ';'
-	|	'assert' expression ':' expression ';'
+	:	'assert' value=expression (':' error=expression)? ';'
 	;
 
 switchStatement
@@ -818,11 +714,7 @@ switchBlock
 	;
 
 switchBlockStatementGroup
-	:	switchLabels blockStatements
-	;
-
-switchLabels
-	:	switchLabel switchLabel*
+	:	switchLabel+ blockStatements
 	;
 
 switchLabel
@@ -909,7 +801,7 @@ synchronizedStatement
 tryStatement
 	:	'try' block catches
 	|	'try' block catches? finally_
-	|	tryWithResourcesStatement
+	|	'try' '(' resource (';' resource)* ';'? ')' block catches? finally_?
 	;
 
 catches
@@ -925,23 +817,11 @@ catchFormalParameter
 	;
 
 catchType
-	:	unannClassType ('|' classType)*
+	:	unannClassOrInterfaceType ('|' classOrInterfaceType)*
 	;
 
 finally_
 	:	'finally' block
-	;
-
-tryWithResourcesStatement
-	:	'try' resourceSpecification block catches? finally_?
-	;
-
-resourceSpecification
-	:	'(' resourceList ';'? ')'
-	;
-
-resourceList
-	:	resource (';' resource)*
 	;
 
 resource
@@ -962,10 +842,9 @@ primary
 
 primaryNoNewArray
 	:	literal
-	|	typeName ('[' ']')* '.' 'class'
-	|	'void' '.' 'class'
-	|	'this'
-	|	typeName '.' 'this'
+	|	classReference
+	|	voidClassReference
+	|	thisReference
 	|	'(' expression ')'
 	|	classInstanceCreationExpression
 	|	fieldAccess
@@ -974,16 +853,11 @@ primaryNoNewArray
 	|	methodReference
 	;
 
-primaryNoNewArray_lf_arrayAccess
-	:
-	;
-
 primaryNoNewArray_lfno_arrayAccess
 	:	literal
-	|	typeName ('[' ']')* '.' 'class'
-	|	'void' '.' 'class'
-	|	'this'
-	|	typeName '.' 'this'
+	|	classReference
+	|	voidClassReference
+	|	thisReference
 	|	'(' expression ')'
 	|	classInstanceCreationExpression
 	|	fieldAccess
@@ -999,10 +873,6 @@ primaryNoNewArray_lf_primary
 	|	methodReference_lf_primary
 	;
 
-primaryNoNewArray_lf_primary_lf_arrayAccess_lf_primary
-	:
-	;
-
 primaryNoNewArray_lf_primary_lfno_arrayAccess_lf_primary
 	:	classInstanceCreationExpression_lf_primary
 	|	fieldAccess_lf_primary
@@ -1012,11 +882,10 @@ primaryNoNewArray_lf_primary_lfno_arrayAccess_lf_primary
 
 primaryNoNewArray_lfno_primary
 	:	literal
-	|	typeName ('[' ']')* '.' 'class'
-	|	unannPrimitiveType ('[' ']')* '.' 'class'
-	|	'void' '.' 'class'
-	|	'this'
-	|	typeName '.' 'this'
+	|	classReference
+	|	primitiveClassReference
+	|	voidClassReference
+	|	thisReference
 	|	'(' expression ')'
 	|	classInstanceCreationExpression_lfno_primary
 	|	fieldAccess_lfno_primary
@@ -1025,17 +894,12 @@ primaryNoNewArray_lfno_primary
 	|	methodReference_lfno_primary
 	;
 
-primaryNoNewArray_lfno_primary_lf_arrayAccess_lfno_primary
-	:
-	;
-
 primaryNoNewArray_lfno_primary_lfno_arrayAccess_lfno_primary
 	:	literal
-	|	typeName ('[' ']')* '.' 'class'
-	|	unannPrimitiveType ('[' ']')* '.' 'class'
-	|	'void' '.' 'class'
-	|	'this'
-	|	typeName '.' 'this'
+	|	classReference
+	|	primitiveClassReference
+	|	voidClassReference
+	|	thisReference
 	|	'(' expression ')'
 	|	classInstanceCreationExpression_lfno_primary
 	|	fieldAccess_lfno_primary
@@ -1043,20 +907,45 @@ primaryNoNewArray_lfno_primary_lfno_arrayAccess_lfno_primary
 	|	methodReference_lfno_primary
 	;
 
+classReference
+	:	dottedIdentifier unannDims? '.' 'class'
+	;
+
+primitiveClassReference
+	:	unannPrimitiveType unannDims? '.' 'class'
+	;
+
+voidClassReference
+	:	'void' '.' 'class'
+	;
+
+thisReference
+	:	(dottedIdentifier '.')? 'this'
+	;
+
 classInstanceCreationExpression
-	:	'new' typeArguments? annotation* Identifier ('.' annotation* Identifier)* typeArgumentsOrDiamond? '(' argumentList? ')' classBody?
-	|	expressionName '.' 'new' typeArguments? annotation* Identifier typeArgumentsOrDiamond? '(' argumentList? ')' classBody?
-	|	primary '.' 'new' typeArguments? annotation* Identifier typeArgumentsOrDiamond? '(' argumentList? ')' classBody?
+	:	'new' standaloneConstructorType '(' argumentList? ')' classBody?
+	|	dottedIdentifier '.' 'new' nestedConstructorType '(' argumentList? ')' classBody?
+	|	primary '.' 'new' nestedConstructorType '(' argumentList? ')' classBody?
 	;
 
 classInstanceCreationExpression_lf_primary
-	:	'.' 'new' typeArguments? annotation* Identifier typeArgumentsOrDiamond? '(' argumentList? ')' classBody?
+	:	'.' 'new' nestedConstructorType '(' argumentList? ')' classBody?
 	;
 
 classInstanceCreationExpression_lfno_primary
-	:	'new' typeArguments? annotation* Identifier ('.' annotation* Identifier)* typeArgumentsOrDiamond? '(' argumentList? ')' classBody?
-	|	expressionName '.' 'new' typeArguments? annotation* Identifier typeArgumentsOrDiamond? '(' argumentList? ')' classBody?
+	:	'new' standaloneConstructorType '(' argumentList? ')' classBody?
+	|	dottedIdentifier '.' 'new'  '(' argumentList? ')' classBody?
 	;
+
+standaloneConstructorType
+	:	typeArguments? annIdentifier ('.' annIdentifier)* typeArgumentsOrDiamond?
+	;
+
+nestedConstructorType
+	:	typeArguments? annIdentifier typeArgumentsOrDiamond?
+	;
+
 
 typeArgumentsOrDiamond
 	:	typeArguments
@@ -1064,9 +953,7 @@ typeArgumentsOrDiamond
 	;
 
 fieldAccess
-	:	primary '.' Identifier
-	|	'super' '.' Identifier
-	|	typeName '.' 'super' '.' Identifier
+	:	(primary | (dottedIdentifier '.')? 'super') '.' Identifier
 	;
 
 fieldAccess_lf_primary
@@ -1074,40 +961,27 @@ fieldAccess_lf_primary
 	;
 
 fieldAccess_lfno_primary
-	:	'super' '.' Identifier
-	|	typeName '.' 'super' '.' Identifier
+	:	(dottedIdentifier '.')? 'super' '.' Identifier
 	;
 
 arrayAccess
-	:	(	expressionName '[' expression ']'
-		|	primaryNoNewArray_lfno_arrayAccess '[' expression ']'
-		)
-		(	primaryNoNewArray_lf_arrayAccess '[' expression ']'
-		)*
+	:	(	dottedIdentifier | primaryNoNewArray_lfno_arrayAccess )
+		( '[' expression ']' )+
 	;
 
 arrayAccess_lf_primary
-	:	(	primaryNoNewArray_lf_primary_lfno_arrayAccess_lf_primary '[' expression ']'
-		)
-		(	primaryNoNewArray_lf_primary_lf_arrayAccess_lf_primary '[' expression ']'
-		)*
+	:	primaryNoNewArray_lf_primary_lfno_arrayAccess_lf_primary
+		(	'[' expression ']' )+
 	;
 
 arrayAccess_lfno_primary
-	:	(	expressionName '[' expression ']'
-		|	primaryNoNewArray_lfno_primary_lfno_arrayAccess_lfno_primary '[' expression ']'
-		)
-		(	primaryNoNewArray_lfno_primary_lf_arrayAccess_lfno_primary '[' expression ']'
-		)*
+	:	(	dottedIdentifier |	primaryNoNewArray_lfno_primary_lfno_arrayAccess_lfno_primary)
+		(	'[' expression ']' )+
 	;
 
 methodInvocation
-	:	methodName '(' argumentList? ')'
-	|	typeName '.' typeArguments? Identifier '(' argumentList? ')'
-	|	expressionName '.' typeArguments? Identifier '(' argumentList? ')'
-	|	primary '.' typeArguments? Identifier '(' argumentList? ')'
-	|	'super' '.' typeArguments? Identifier '(' argumentList? ')'
-	|	typeName '.' 'super' '.' typeArguments? Identifier '(' argumentList? ')'
+	:	methodInvocation_lfno_primary
+	|	primary methodInvocation_lf_primary
 	;
 
 methodInvocation_lf_primary
@@ -1115,11 +989,10 @@ methodInvocation_lf_primary
 	;
 
 methodInvocation_lfno_primary
-	:	methodName '(' argumentList? ')'
-	|	typeName '.' typeArguments? Identifier '(' argumentList? ')'
-	|	expressionName '.' typeArguments? Identifier '(' argumentList? ')'
-	|	'super' '.' typeArguments? Identifier '(' argumentList? ')'
-	|	typeName '.' 'super' '.' typeArguments? Identifier '(' argumentList? ')'
+	:	Identifier '(' argumentList? ')'
+	|	dottedIdentifier methodInvocation_lf_primary
+	|	onSuper='super' methodInvocation_lf_primary
+	|	dottedIdentifier '.' onSuper='super' methodInvocation_lf_primary
 	;
 
 argumentList
@@ -1127,12 +1000,12 @@ argumentList
 	;
 
 methodReference
-	:	expressionName '::' typeArguments? Identifier
+	:	dottedIdentifier '::' typeArguments? Identifier
 	|	referenceType '::' typeArguments? Identifier
 	|	primary '::' typeArguments? Identifier
 	|	'super' '::' typeArguments? Identifier
-	|	typeName '.' 'super' '::' typeArguments? Identifier
-	|	classType '::' typeArguments? 'new'
+	|	dottedIdentifier '.' 'super' '::' typeArguments? Identifier
+	|	classOrInterfaceType '::' typeArguments? 'new'
 	|	arrayType '::' 'new'
 	;
 
@@ -1141,19 +1014,16 @@ methodReference_lf_primary
 	;
 
 methodReference_lfno_primary
-	:	expressionName '::' typeArguments? Identifier
+	:	dottedIdentifier '::' typeArguments? Identifier
 	|	referenceType '::' typeArguments? Identifier
 	|	'super' '::' typeArguments? Identifier
-	|	typeName '.' 'super' '::' typeArguments? Identifier
-	|	classType '::' typeArguments? 'new'
+	|	dottedIdentifier '.' 'super' '::' typeArguments? Identifier
+	|	classOrInterfaceType '::' typeArguments? 'new'
 	|	arrayType '::' 'new'
 	;
 
 arrayCreationExpression
-	:	'new' primitiveType dimExprs dims?
-	|	'new' classOrInterfaceType dimExprs dims?
-	|	'new' primitiveType dims arrayInitializer
-	|	'new' classOrInterfaceType dims arrayInitializer
+	:	'new' (primitiveType | classOrInterfaceType) (dimExprs dims? | dims arrayInitializer)
 	;
 
 dimExprs
@@ -1202,7 +1072,7 @@ assignment
 	;
 
 leftHandSide
-	:	expressionName
+	:	dottedIdentifier
 	|	fieldAccess
 	|	arrayAccess
 	;
@@ -1254,91 +1124,90 @@ andExpression
 
 equalityExpression
 	:	relationalExpression
-	|	equalityExpression '==' relationalExpression
-	|	equalityExpression '!=' relationalExpression
+	|	equalityExpression operator='==' relationalExpression
+	|	equalityExpression operator='!=' relationalExpression
 	;
 
 relationalExpression
 	:	shiftExpression
-	|	relationalExpression '<' shiftExpression
-	|	relationalExpression '>' shiftExpression
-	|	relationalExpression '<=' shiftExpression
-	|	relationalExpression '>=' shiftExpression
-	|	relationalExpression 'instanceof' referenceType
+	|	relationalExpression operator='<' shiftExpression
+	|	relationalExpression operator='>' shiftExpression
+	|	relationalExpression operator='<=' shiftExpression
+	|	relationalExpression operator='>=' shiftExpression
+	|	relationalExpression operator='instanceof' referenceType
 	;
 
 shiftExpression
 	:	additiveExpression
-	|	shiftExpression '<' '<' additiveExpression
-	|	shiftExpression '>' '>' additiveExpression
-	|	shiftExpression '>' '>' '>' additiveExpression
+	|	shiftExpression shiftOperator additiveExpression
+	;
+
+shiftOperator
+	:	'<' '<'
+	|	'>' '>'
+	|	'>' '>' '>'
 	;
 
 additiveExpression
 	:	multiplicativeExpression
-	|	additiveExpression '+' multiplicativeExpression
-	|	additiveExpression '-' multiplicativeExpression
+	|	additiveExpression operator='+' multiplicativeExpression
+	|	additiveExpression operator='-' multiplicativeExpression
 	;
 
 multiplicativeExpression
 	:	unaryExpression
-	|	multiplicativeExpression '*' unaryExpression
-	|	multiplicativeExpression '/' unaryExpression
-	|	multiplicativeExpression '%' unaryExpression
+	|	multiplicativeExpression operator='*' unaryExpression
+	|	multiplicativeExpression operator='/' unaryExpression
+	|	multiplicativeExpression operator='%' unaryExpression
 	;
 
 unaryExpression
 	:	preIncrementExpression
 	|	preDecrementExpression
-	|	'+' unaryExpression
-	|	'-' unaryExpression
+	|	operator='+' unaryExpression
+	|	operator='-' unaryExpression
 	|	unaryExpressionNotPlusMinus
 	;
 
 preIncrementExpression
-	:	'++' unaryExpression
+	:	operator='++' unaryExpression
 	;
 
 preDecrementExpression
-	:	'--' unaryExpression
+	:	operator='--' unaryExpression
 	;
 
 unaryExpressionNotPlusMinus
 	:	postfixExpression
-	|	'~' unaryExpression
-	|	'!' unaryExpression
+	|	operator='~' unaryExpression
+	|	operator='!' unaryExpression
 	|	castExpression
 	;
 
 postfixExpression
 	:	(	primary
-		|	expressionName
+		|	dottedIdentifier
 		)
-		(	postIncrementExpression_lf_postfixExpression
-		|	postDecrementExpression_lf_postfixExpression
-		)*
+		postfixExpressionOperator*
 	;
 
 postIncrementExpression
 	:	postfixExpression '++'
 	;
 
-postIncrementExpression_lf_postfixExpression
-	:	'++'
-	;
-
 postDecrementExpression
 	:	postfixExpression '--'
 	;
 
-postDecrementExpression_lf_postfixExpression
+postfixExpressionOperator
 	:	'--'
+	|	'++'
 	;
 
 castExpression
 	:	'(' primitiveType ')' unaryExpression
-	|	'(' referenceType additionalBound* ')' unaryExpressionNotPlusMinus
-	|	'(' referenceType additionalBound* ')' lambdaExpression
+	|	'(' referenceType ('&' classOrInterfaceType)* ')' unaryExpressionNotPlusMinus
+	|	'(' referenceType ('&' classOrInterfaceType)* ')' lambdaExpression
 	;
 
 // LEXER
